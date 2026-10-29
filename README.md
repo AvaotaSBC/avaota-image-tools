@@ -68,6 +68,14 @@ It produces exactly three board images:
   default image size is 64 MiB; set
   `AVAOTA_SD_IMAGE_SECTORS` to choose another size.
 
+The SD runtime U-Boot also contains a narrow PhoenixCard compatibility repair.
+Some PhoenixCard versions resize the last GPT entry for the target card but
+leave the GPT entry-array CRC from the source image. Before partition probing,
+the SD U-Boot verifies the GPT header, recomputes the entry-array CRC when this
+is the only inconsistency, and updates the primary and backup header CRCs. It
+does not change the direct raw SD path: that image has a real DOS MBR at LBA0
+and an intentionally invalid GPT compatibility header at LBA1.
+
 The SPI-NOR raw image uses the Allwinner logical map rather than an MBR. Its
 Linux root partition is `/dev/mtdblock6` (`rootfs`; `rootfs_data` is mtd7);
 U-Boot supplies the NOR logical offset (`mbr_offset=2016*512`) to the kernel.
