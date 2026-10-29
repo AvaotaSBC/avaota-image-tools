@@ -12,4 +12,5 @@ PhoenixCard product path.
 The raw SD image is assembled separately with a DOS/MBR table and rootfs at
 p2. The common SD path uses the Tina GPT map and rootfs at p7. The NOR path
 uses the logical MTD map and rootfs at mtd6. The packer preserves the NOR
-`dlinfo.fex` in the common image after generating the raw SD image.
+`dlinfo.fex` in the common image after generating the raw SD image. The SD
+U-Boot repairs only stale GPT CRCs in-place, preserving PhoenixCard entries.
