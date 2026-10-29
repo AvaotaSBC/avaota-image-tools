@@ -24,10 +24,12 @@ appropriate Boot0/boot package for the target medium. The package checker in
 `tools/pack/` verifies that the NOR item is the uncompressed package containing
 the NOR U-Boot; this prevents the SD U-Boot or the optional IPC LZMA package
 from being selected accidentally.
-The SD U-Boot repairs the primary and backup GPT header entry-array CRC when a
-PhoenixCard write leaves that CRC stale after resizing the card-specific last
-partition. This repair is restricted to the valid common GPT path; the direct
-SD raw image continues to use its DOS MBR.
+The SD U-Boot repairs the common GPT path when a PhoenixCard write leaves the
+primary entry array stale or unusable. It prefers the valid backup GPT at the
+physical end of the card, copies its entries into the primary array, and
+recalculates the primary header CRC; without a valid backup it only repairs the
+primary array CRC. The direct SD raw image continues to use its DOS MBR and is
+not modified by this compatibility path.
 The `u-boot-efex.fex` member used by the USB/FEL updater is built from the
 dedicated `sun300iw1p1_efex_defconfig` and uses the NOR storage overlay
 (`storage_type = 3`), as it does in Tina's NOR image. It is not a copy of the

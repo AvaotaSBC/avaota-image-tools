@@ -69,12 +69,14 @@ It produces exactly three board images:
   `AVAOTA_SD_IMAGE_SECTORS` to choose another size.
 
 The SD runtime U-Boot also contains a narrow PhoenixCard compatibility repair.
-Some PhoenixCard versions resize the last GPT entry for the target card but
-leave the GPT entry-array CRC from the source image. Before partition probing,
-the SD U-Boot verifies the GPT header, recomputes the entry-array CRC when this
-is the only inconsistency, and updates the primary and backup header CRCs. It
-does not change the direct raw SD path: that image has a real DOS MBR at LBA0
-and an intentionally invalid GPT compatibility header at LBA1.
+Some PhoenixCard versions leave a valid primary GPT header paired with a stale
+or unusable primary entry array after writing the card. Before partition
+probing, the SD U-Boot follows the same physical-last-LBA backup-GPT fallback
+as its GPT parser, copies a valid backup entry array into the primary array,
+and recalculates the primary header CRC. If no valid backup exists, it retains
+the older narrow fallback of recalculating the primary array CRC only. It does
+not change the direct raw SD path: that image has a real DOS MBR at LBA0 and an
+intentionally invalid GPT compatibility header at LBA1.
 
 The SPI-NOR raw image uses the Allwinner logical map rather than an MBR. Its
 Linux root partition is `/dev/mtdblock6` (`rootfs`; `rootfs_data` is mtd7);
