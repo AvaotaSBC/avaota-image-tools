@@ -1,0 +1,25 @@
+# Board definitions, prebuilt Allwinner inputs and pack tools are source files
+# and must be included in a remote clone.  Do not add generic *.bin/*.fex
+# rules: boards/avaota-f1/prebuilt contains required boot and Phoenix inputs.
+!boards/
+!boards/avaota-f1/
+!boards/avaota-f1/**
+!tools/
+!tools/pack/
+!tools/pack/**
+!pack-avaota-f1-images.sh
+
+# Keep generated scratch output and Python caches out of the image-tools
+# repository.  These rules intentionally come after the source exceptions so
+# a pack-tool cache cannot be re-included by !tools/pack/**.
+/build/
+*.log
+__pycache__/
+*.pyc
+
+# Defensive exclusions when the pack script is pointed at the repository root.
+/avaota-f1-flash.img
+/avaota-f1-spinor.raw
+/avaota-f1-sd.raw
+/avaota-f1-images.sha256
+/avaota-f1-boot-manifest.txt
