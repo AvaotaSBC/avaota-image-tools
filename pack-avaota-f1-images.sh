@@ -452,6 +452,8 @@ echo "==> packaging common Allwinner SPI-NOR/SD image"
 		--filename sunxi_gpt.fex=sunxi_gpt.fex \
 		--filename sunxi_mbr_nor.fex=sunxi_mbr_nor.fex \
 		--filename dlinfo.fex=dlinfo-nor.fex \
+		--filename cardtool.fex=cardtool.fex \
+		--filename cardscript.fex=cardscript.fex \
 		--filename env.fex=env.fex \
 		--filename boot.fex=boot.fex \
 		--filename rootfs_nor.fex=rootfs_nor.fex >/dev/null
