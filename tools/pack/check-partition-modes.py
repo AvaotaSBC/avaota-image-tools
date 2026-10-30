@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Check the two V821 SD partition formats and their root fallbacks.
+"""Check the SPI-NOR map and the direct-SD raw layout.
 
-The common PhoenixCard image uses Tina's GPT map, while the direct SD raw
-image deliberately exposes a DOS MBR.  The V821 U-Boot selects its parser at
-runtime from these on-card signatures, so a pack regression must be caught
-before either image is published.
+The Allwinner IMAGEWTY output is the SPI-NOR/PhoenixSuit image.  The SD
+output is deliberately a separate DOS/MBR raw image and is never treated as
+an IMAGEWTY image.
 """
 
 from __future__ import annotations
@@ -119,25 +118,22 @@ def check_sd_raw(path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--common-gpt", required=True, type=Path)
+    parser.add_argument("--nor-gpt", required=True, type=Path)
     parser.add_argument("--sd-raw", required=True, type=Path)
-    parser.add_argument("--common-env", required=True, type=Path)
     parser.add_argument("--sd-env", required=True, type=Path)
     parser.add_argument("--nor-env", required=True, type=Path)
     args = parser.parse_args()
 
-    names = check_gpt(args.common_gpt)
+    names = check_gpt(args.nor_gpt)
     check_sd_raw(args.sd_raw)
     if names.index("rootfs") + 1 != 7:
-        fail(f"{args.common_gpt}: rootfs is not GPT partition 7")
-    if env_value(args.common_env, "mmc_root") != "/dev/mmcblk0p7":
-        fail(f"{args.common_env}: common-image mmc_root is not /dev/mmcblk0p7")
+        fail(f"{args.nor_gpt}: rootfs is not logical partition 7")
     if env_value(args.sd_env, "mmc_root") != "/dev/mmcblk0p2":
         fail(f"{args.sd_env}: raw-SD mmc_root is not /dev/mmcblk0p2")
     if env_value(args.nor_env, "nor_root") != "/dev/mtdblock6":
         fail(f"{args.nor_env}: NOR nor_root is not /dev/mtdblock6")
 
-    print("ok: common GPT rootfs=p7; SD raw DOS rootfs=p2; NOR root=mtdblock6")
+    print("ok: SPI-NOR logical root=mtdblock6; SD raw DOS rootfs=p2")
 
 
 if __name__ == "__main__":

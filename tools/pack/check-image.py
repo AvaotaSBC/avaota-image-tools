@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the file table and selected payloads in a Phoenix IMAGEWTY file."""
+"""Validate an Allwinner SPI-NOR IMAGEWTY file and selected payloads."""
 
 from __future__ import annotations
 

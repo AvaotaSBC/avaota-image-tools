@@ -1,16 +1,9 @@
 # Avaota-F1 image inputs
 
 - `sys_partition.fex`: SD/raw layout;
-- `sys_partition_nor.fex`: SPI-NOR and common Phoenix image layout;
-- `image.cfg`, `env-*.cfg`, and `prebuilt/`: Allwinner packaging inputs.
+- `sys_partition_nor.fex`: SPI-NOR layout;
+- `image_nor.cfg`, `env-*.cfg`, and `prebuilt/`: Allwinner packaging inputs.
 
-The common `IMAGEWTY` image uses the Tina NOR map while carrying separate SD
-and NOR boot packages. Its `boot-resource` placeholder is intentionally not a
-download item. `cardscript.fex` and `cardtool.fex` are kept unchanged for the
-PhoenixCard product path.
-
-The raw SD image is assembled separately with a DOS/MBR table and rootfs at
-p2. The common SD path uses the Tina GPT map and rootfs at p7. The NOR path
-uses the logical MTD map and rootfs at mtd6. The packer preserves the NOR
-`dlinfo.fex` in the common image after generating the raw SD image. The SD
-U-Boot repairs only stale GPT CRCs in-place, preserving PhoenixCard entries.
+`avaota-f1-spinor.img` follows Tina's `image_nor` flow and is for SPI-NOR
+with PhoenixSuit. `avaota-f1-sd.raw` is a separate DOS/MBR image for direct
+SD writes and uses rootfs partition 2. SPI-NOR uses logical MTD partition 6.

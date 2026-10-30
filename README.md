@@ -21,17 +21,12 @@ cannot be linked by a generic toolchain.
 
 The output is:
 
-- `avaota-f1-flash.img`: common `IMAGEWTY` image for PhoenixSuit/PhoenixCard,
-  usable on SPI-NOR and SD;
+- `avaota-f1-spinor.img`: Allwinner `IMAGEWTY` image for SPI-NOR; write it
+  to SPI-NOR with PhoenixSuit;
 - `avaota-f1-spinor.raw`: raw SPI-NOR image;
 - `avaota-f1-sd.raw`: raw SD image with a DOS/MBR partition table.
 
-The common image follows Tina's packaging model: it carries both storage
-boot packages and the NOR-compatible common partition map. The raw SD image
-uses rootfs p2; the common SD path uses the Tina GPT map and rootfs p7; the
-NOR path uses `/dev/mtdblock6`. The packer verifies image payloads, boot
-package placement, partition modes, checksums, and the 115200-baud Boot0
-patch before publishing outputs.
-
-Use only the `*.raw` files for direct device writes. Use the `IMAGEWTY` file
-with the Allwinner flashing tools.
+The SD image is independent of the IMAGEWTY flow and must be written directly
+to the card. Its rootfs is `/dev/mmcblk0p2`; SPI-NOR uses `/dev/mtdblock6`.
+The packer verifies payloads, boot-package placement, partition modes,
+checksums, and the 115200-baud Boot0 patch.

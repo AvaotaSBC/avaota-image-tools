@@ -7,9 +7,9 @@ usage() {
 Usage: pack-avaota-f1-images.sh --binaries-dir DIR [options]
 
 Build U-Boot with a Buildroot RISC-V32 compiler and produce:
-  avaota-f1-flash.img   common Allwinner Phoenix/Dragon image for SPI-NOR and SD
+  avaota-f1-spinor.img  Allwinner IMAGEWTY image for SPI-NOR (PhoenixSuit)
   avaota-f1-spinor.raw  raw SPI-NOR image
-  avaota-f1-sd.raw      raw SD image
+  avaota-f1-sd.raw      raw SD image (write directly; not PhoenixCard)
 
 Options:
   --binaries-dir DIR       Buildroot images directory (required)
@@ -153,10 +153,12 @@ mkdir -p "$PACK_DIR"
 
 # These were outputs of the old split-specific image flow. Remove only these
 # exact files so a rerun cannot leave an obsolete image next to the new ones.
-for stale in avaota-f1-sd.img avaota-f1-nor-env.fex avaota-f1-sd-env.fex; do
+for stale in avaota-f1-flash.img avaota-f1-spinor.img avaota-f1-sd.img \
+	avaota-f1-nor-env.fex avaota-f1-sd-env.fex; do
 	find "$OUTPUT_DIR" -maxdepth 1 -type f -name "$stale" -delete
 done
-for stale in avaota-f1-sd.img env-nor.fex env-sd.fex; do
+for stale in avaota-f1-flash.img avaota-f1-sd.img image.cfg env-common.cfg \
+	env-nor.fex env-sd.fex; do
 	find "$PACK_DIR" -maxdepth 1 -type f -name "$stale" -delete
 done
 
@@ -314,7 +316,7 @@ copy_prebuilt
 python3 "$PATCH_BOOT0_BAUD" \
 	"$PACK_DIR/boot0_sdcard.fex" "$PACK_DIR/boot0_spinor.fex" \
 	"$PACK_DIR/pmboot_sdcard.fex" "$PACK_DIR/pmboot_spinor.fex"
-cp -f "$BOARD_DIR/image.cfg" "$PACK_DIR/image.cfg"
+cp -f "$BOARD_DIR/image_nor.cfg" "$PACK_DIR/image_nor.cfg"
 cp -f "$BOARD_DIR/boot_package.cfg" "$PACK_DIR/boot_package.cfg"
 cp -f "$BOARD_DIR/boot_package_nor.cfg" "$PACK_DIR/boot_package_nor.cfg"
 cp -f "$BOARD_DIR/boot-resource.ini" "$PACK_DIR/boot-resource.ini"
@@ -428,22 +430,20 @@ cp -f "$PACK_DIR/avaota-f1-sd.raw" "$OUTPUT_DIR/avaota-f1-sd.raw"
 echo "==> packaging common Allwinner SPI-NOR/SD image"
 (
 	cd "$PACK_DIR"
-	# Tina's common Phoenix/Dragon image uses the NOR partition map while
-	# carrying both SD and SPI boot files in image.cfg.
-	# Its environment must remain medium-neutral: U-Boot's board helper
-	# replaces setargs_nand with setargs_mmc or setargs_nor at runtime.
+	# Tina's image_nor flow is the SPI-NOR IMAGEWTY flow.  It is not an SD
+	# image and must be written to SPI-NOR with PhoenixSuit.
 	# update_mbr rewrites dlinfo.fex in place.  The SD raw flow above leaves
-	# an SD dlinfo (including boot-resource), while Tina's common NOR image
-	# deliberately carries the NOR dlinfo matching sys_partition_nor.fex.
+	# an SD dlinfo, while this image deliberately carries the NOR dlinfo
+	# matching sys_partition_nor.fex.
 	cp -f dlinfo-nor.fex dlinfo.fex
-	"$MKENVIMAGE" -r -s 0x20000 -o env.fex "$BOARD_DIR/env-common.cfg"
+	"$MKENVIMAGE" -r -s 0x20000 -o env.fex "$BOARD_DIR/env-nor.cfg"
 	check_env_image env.fex
 	cp -f sys_config-nor.fex sys_config.fex
 	cp -f sys_config-nor.bin config.fex
 	cp -f sys_partition_nor.fex sys_partition.fex
 	cp -f sunxi_gpt-nor.fex sunxi_gpt.fex
-	run_pack_tool "$DRAGON" image.cfg sys_partition.fex >/dev/null
-	python3 "$CHECK_IMAGE" avaota-f1-flash.img \
+	run_pack_tool "$DRAGON" image_nor.cfg sys_partition.fex >/dev/null
+	python3 "$CHECK_IMAGE" avaota-f1-spinor.img \
 		--item COMMON:SYS_CONFIG100000=sys_config.fex \
 		--item COMMON:SYS_CONFIG000000=sys_partition.fex \
 		--item 12345678:BOOTPKG-00000000=boot_package.fex \
@@ -458,12 +458,11 @@ echo "==> packaging common Allwinner SPI-NOR/SD image"
 		--filename boot.fex=boot.fex \
 		--filename rootfs_nor.fex=rootfs_nor.fex >/dev/null
 )
-cp -f "$PACK_DIR/avaota-f1-flash.img" "$OUTPUT_DIR/avaota-f1-flash.img"
+cp -f "$PACK_DIR/avaota-f1-spinor.img" "$OUTPUT_DIR/avaota-f1-spinor.img"
 
 python3 "$CHECK_PARTITION_MODES" \
-	--common-gpt "$PACK_DIR/sunxi_gpt.fex" \
+	--nor-gpt "$PACK_DIR/sunxi_gpt.fex" \
 	--sd-raw "$OUTPUT_DIR/avaota-f1-sd.raw" \
-	--common-env "$PACK_DIR/env.fex" \
 	--sd-env "$PACK_DIR/env-sd.fex" \
 	--nor-env "$PACK_DIR/env-nor.fex" >/dev/null
 
@@ -472,7 +471,7 @@ python3 "$CHECK_PARTITION_MODES" \
 # directory after a successful pack.
 rm -f "$PACK_DIR/dlinfo-nor.fex" "$PACK_DIR/sunxi_gpt-nor.fex"
 # The vendor `script` helper leaves four-byte V*.fex checksum sidecars in its
-# working directory.  They are not referenced by image.cfg or any output
+# working directory.  They are not referenced by image_nor.cfg or any output
 # image, so remove them from the reusable scratch directory as well.
 find "$PACK_DIR" -maxdepth 1 -type f -name 'V*.fex' -delete
 
@@ -481,7 +480,7 @@ sd_mbr_magic=$(dd if="$OUTPUT_DIR/avaota-f1-sd.raw" bs=1 skip=510 count=2 2>/dev
 sd_boot0_gpt_magic=$(dd if="$OUTPUT_DIR/avaota-f1-sd.raw" bs=1 skip=512 count=8 2>/dev/null | od -An -tx1 | tr -d ' \n')
 sd_boot0_gpt_crc=$(dd if="$OUTPUT_DIR/avaota-f1-sd.raw" bs=1 skip=528 count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
 sd_raw_magic=$(dd if="$OUTPUT_DIR/avaota-f1-sd.raw" bs=1 skip=$((16 * 512 + 4)) count=8 2>/dev/null | od -An -tx1 | tr -d ' \n')
-flash_magic=$(dd if="$OUTPUT_DIR/avaota-f1-flash.img" bs=1 count=8 2>/dev/null | od -An -tx1 | tr -d ' \n')
+spinor_image_magic=$(dd if="$OUTPUT_DIR/avaota-f1-spinor.img" bs=1 count=8 2>/dev/null | od -An -tx1 | tr -d ' \n')
 [ "$nor_magic" = "65474f4e2e425430" ] ||
 	{ echo "error: invalid NOR eGON.BT0 magic" >&2; exit 1; }
 [ "$sd_mbr_magic" = "55aa" ] ||
@@ -492,8 +491,8 @@ flash_magic=$(dd if="$OUTPUT_DIR/avaota-f1-flash.img" bs=1 count=8 2>/dev/null |
 	{ echo "error: SD Boot0 GPT compatibility header must not override the DOS MBR" >&2; exit 1; }
 [ "$sd_raw_magic" = "65474f4e2e425430" ] ||
 	{ echo "error: invalid SD raw eGON.BT0 magic" >&2; exit 1; }
-[ "$flash_magic" = "494d414745575459" ] ||
-	{ echo "error: invalid common IMAGEWTY magic" >&2; exit 1; }
+[ "$spinor_image_magic" = "494d414745575459" ] ||
+	{ echo "error: invalid SPI-NOR IMAGEWTY magic" >&2; exit 1; }
 
 python3 "$CHECK_RAW_IMAGES" \
 	--nor-raw "$OUTPUT_DIR/avaota-f1-spinor.raw" \
@@ -503,7 +502,7 @@ python3 "$CHECK_RAW_IMAGES" \
 
 (
 	cd "$OUTPUT_DIR"
-	sha256sum avaota-f1-flash.img avaota-f1-spinor.raw avaota-f1-sd.raw > avaota-f1-images.sha256
+	sha256sum avaota-f1-spinor.img avaota-f1-spinor.raw avaota-f1-sd.raw > avaota-f1-images.sha256
 )
 {
 	echo "board=Avaota-F1"
@@ -511,7 +510,7 @@ python3 "$CHECK_RAW_IMAGES" \
 	echo "toolchain=$MACHINE"
 	echo "kernel=$KERNEL"
 	echo "dtb=$DTB"
-	echo "allwinner_flash_image=$OUTPUT_DIR/avaota-f1-flash.img"
+	echo "allwinner_spinor_image=$OUTPUT_DIR/avaota-f1-spinor.img"
 	echo "spinor_raw_image=$OUTPUT_DIR/avaota-f1-spinor.raw"
 	echo "sd_raw_image=$OUTPUT_DIR/avaota-f1-sd.raw"
 	echo "nor_layout=32MiB SPI-NOR, logic_start=2016 sectors, uboot_start=128 sectors"
@@ -520,13 +519,13 @@ python3 "$CHECK_RAW_IMAGES" \
 	echo "sd_root=/dev/mmcblk0p2"
 	echo "sd_allwinner_boot=Boot0@LBA16/256, boot_package@LBA24576/32800, sunxi_mbr@LBA40960, logical_start=40960 sectors"
 	echo "sd_image_sectors=$SD_IMAGE_SECTORS"
-	echo "flash_image_scope=common Allwinner Phoenix/Dragon image for SPI-NOR and SD"
+	echo "spinor_image_scope=Allwinner IMAGEWTY image for SPI-NOR/PhoenixSuit only"
 	echo "nor_boot_package=uncompressed:opensbi,u-boot,pmboot; u-boot=u-boot-spinor.fex; storage_type=3"
 	echo "nor_fel_uboot=u-boot-efex.fex; dedicated EFEX/FEL variant; storage_type=3"
 	echo "sd_boot_package=uncompressed:opensbi,u-boot,melis-elf; u-boot=u-boot.fex; storage_type=1"
 } > "$OUTPUT_DIR/avaota-f1-boot-manifest.txt"
 
-echo "FLASH: $OUTPUT_DIR/avaota-f1-flash.img"
+echo "SPINOR: $OUTPUT_DIR/avaota-f1-spinor.img"
 echo "NOR  : $OUTPUT_DIR/avaota-f1-spinor.raw"
 echo "SD   : $OUTPUT_DIR/avaota-f1-sd.raw"
 
