@@ -18,7 +18,6 @@ __pycache__/
 *.pyc
 
 # Defensive exclusions when the pack script is pointed at the repository root.
-/avaota-f1-flash.img
 /avaota-f1-spinor.raw
 /avaota-f1-sd.raw
 /avaota-f1-images.sha256

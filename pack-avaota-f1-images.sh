@@ -427,7 +427,7 @@ cp -f "$PACK_DIR/env.fex" "$PACK_DIR/env-sd.fex"
 )
 cp -f "$PACK_DIR/avaota-f1-sd.raw" "$OUTPUT_DIR/avaota-f1-sd.raw"
 
-echo "==> packaging common Allwinner SPI-NOR/SD image"
+echo "==> packaging Allwinner SPI-NOR IMAGEWTY image"
 (
 	cd "$PACK_DIR"
 	# Tina's image_nor flow is the SPI-NOR IMAGEWTY flow.  It is not an SD
